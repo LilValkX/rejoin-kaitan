@@ -3,78 +3,77 @@ local StarterGui = game:GetService("StarterGui")
 local SoundService = game:GetService("SoundService")
 local Lighting = game:GetService("Lighting")
 local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
 
 repeat task.wait() until game:IsLoaded()
 
 local player = Players.LocalPlayer
 if not player then
-    local ok, p = pcall(function() return Players.PlayerAdded:Wait() end)
-    if ok and p then
-        player = p
-    else
-        repeat task.wait() until Players.LocalPlayer
-        player = Players.LocalPlayer
-    end
+    player = Players.PlayerAdded:Wait()
 end
 
-if player then
-    if not player.Character then
-        local ok, c = pcall(function() return player.CharacterAdded:Wait() end)
-        if not (ok and c) then
-            repeat task.wait() until player.Character
-        end
-    end
+local function waitForCharacter()
+    if player.Character then return end
+    local connection
+    local timeout = 30
+    local startTime = tick()
+    connection = player.CharacterAdded:Connect(function()
+        if connection then connection:Disconnect() end
+    end)
+    repeat task.wait(0.1) until player.Character or (tick() - startTime) > timeout
+    if connection then connection:Disconnect() end
 end
+
+waitForCharacter()
 
 if setfpscap then pcall(setfpscap, 15) end
 
+if setfflag then
+    local performanceFlags = {
+        "RenderShadowIntensity", "0",
+        "RenderVoxelUpgradeEnabled", "False",
+        "DFIntMaxActiveParticleCount", "25",
+        "DFIntParticleSystemMaxCount", "10",
+        "GuiService3DEnabled", "False",
+        "DFIntTaskSchedulerTargetFps", "15"
+    }
+    for i = 1, #performanceFlags, 2 do
+        pcall(setfflag, performanceFlags[i], performanceFlags[i + 1])
+    end
+end
+
 pcall(function()
-    local ok, us = pcall(function() return UserSettings() end)
-    if ok and us then
-        local gs = us.GameSettings
+    local userSettings = UserSettings()
+    if userSettings then
+        local gs = userSettings.GameSettings
         if gs then
-            pcall(function() gs.MasterVolume = 0 end)
-            pcall(function() gs.SavedQualityLevel = Enum.SavedQualitySetting.QualityLevel1 end)
+            gs.MasterVolume = 0
+            gs.SavedQualityLevel = Enum.SavedQualitySetting.QualityLevel1
+            gs.GraphicsMode = Enum.GraphicsMode.Manual
+            gs.QualityLevel = 1
         end
     end
 end)
 
-if setfflag then
-    pcall(function()
-        pcall(setfflag, "RenderShadowIntensity", "0")
-        pcall(setfflag, "RenderShadowmapBias", "0.05")
-        pcall(setfflag, "DebugForceFutureIsBrightPhase2", "False")
-        pcall(setfflag, "DFFlagDebugRenderForceTechnologyVoxel", "True")
-        pcall(setfflag, "DFFlagRenderFixFog", "False")
-        pcall(setfflag, "FFlagTerrainMeshPartHeightfields", "False")
-        pcall(setfflag, "DFIntTerrainArraySliceSize", "4")
-        pcall(setfflag, "RenderVoxelUpgradeEnabled", "False")
-        pcall(setfflag, "DFFlagPostProcessDistortion", "False")
-        pcall(setfflag, "DFIntMaxActiveParticleCount", "100")
-        pcall(setfflag, "DFIntParticleSystemMaxCount", "50")
-        pcall(setfflag, "GuiService3DEnabled", "False")
-        pcall(setfflag, "DFFlagUserShowGuiHideToggles", "False")
-        pcall(setfflag, "AbuseReportScreenshotPercentage", "0")
-        pcall(setfflag, "DFIntCanHideGuiGroupId", "999999999")
-        pcall(setfflag, "DFIntAnimationLodFacsDistanceMax", "25")
-        pcall(setfflag, "DFIntAnimationLodFacsDistanceMin", "10")
-        pcall(setfflag, "DFFlagDebugPause", "False")
-        pcall(setfflag, "FFlagEnableInGameMenuControls", "False")
-        pcall(setfflag, "TextChatServiceEnabled", "False")
-    end)
-end
-
 pcall(function()
-    StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
-    StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Health, false)
-    StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
-    StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, false)
-    StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.EmotesMenu, false)
+    local coreGuiTypes = {
+        Enum.CoreGuiType.PlayerList,
+        Enum.CoreGuiType.Health,
+        Enum.CoreGuiType.Backpack,
+        Enum.CoreGuiType.Chat,
+        Enum.CoreGuiType.EmotesMenu,
+    }
+    for _, guiType in pairs(coreGuiTypes) do
+        StarterGui:SetCoreGuiEnabled(guiType, false)
+    end
 end)
 
 pcall(function()
-    pcall(function() SoundService.Volume = 0 end)
-    pcall(function() SoundService.RespectFilteringEnabled = false end)
+    SoundService.Volume = 0
+    SoundService.AmbientReverb = Enum.ReverbType.NoReverb
+    if SoundService:FindFirstChild("RespectFilteringEnabled") then
+        SoundService.RespectFilteringEnabled = false
+    end
 end)
 
 pcall(function()
@@ -83,58 +82,125 @@ pcall(function()
     Lighting.EnvironmentDiffuseScale = 0
     Lighting.EnvironmentSpecularScale = 0
     Lighting.GlobalShadows = false
-    Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
-    for _, effect in ipairs(Lighting:GetChildren()) do
+    Lighting.FogStart = 0
+    Lighting.FogEnd = 100000
+    Lighting.OutdoorAmbient = Color3.new(0.5, 0.5, 0.5)
+    for _, effect in pairs(Lighting:GetChildren()) do
         if effect:IsA("PostEffect") then
             pcall(function() effect:Destroy() end)
         end
     end
 end)
 
-local all = {}
-local ok, desc = pcall(function() return game:GetDescendants() end)
-if ok and desc then all = desc end
-
-for _, obj in pairs(all) do
-    if obj:IsA("Sound") then
-        pcall(function()
+local function optimizeObject(obj)
+    if not obj or not obj.Parent then return end
+    pcall(function()
+        if obj:IsA("Sound") then
             obj.Volume = 0
-            if rawget(obj, "Enabled") ~= nil then obj.Enabled = false end
-        end)
-    end
-
-    if obj:IsA("ParticleEmitter") or obj:IsA("Fire") or obj:IsA("Smoke") or obj:IsA("Sparkles") then
-        pcall(function()
-            if rawget(obj, "Enabled") ~= nil then obj.Enabled = false end
-            if obj.Parent then pcall(function() obj:Destroy() end) end
-        end)
-    end
-
-    if obj:IsA("BasePart") then
-        pcall(function()
+            obj:Stop()
+            obj.PlayOnRemove = false
+        elseif obj:IsA("ParticleEmitter") or obj:IsA("Fire") or obj:IsA("Smoke") or obj:IsA("Sparkles") then
+            obj.Enabled = false
+        elseif obj:IsA("MeshPart") then
+            obj.TextureID = ""
             obj.Material = Enum.Material.SmoothPlastic
-            if rawget(obj, "TopSurface") ~= nil then obj.TopSurface = Enum.SurfaceType.Smooth end
-            if rawget(obj, "BottomSurface") ~= nil then obj.BottomSurface = Enum.SurfaceType.Smooth end
-        end)
-    end
-
-    if obj:IsA("Decal") or obj:IsA("Texture") then
-        pcall(function()
-            if obj:IsDescendantOf(Workspace:FindFirstChild("Terrain") or Workspace) then
-                pcall(function() obj:Destroy() end)
-            else
-                obj.Transparency = 1
+            obj.CastShadow = false
+        elseif obj:IsA("SpecialMesh") or obj:IsA("FileMesh") or obj:IsA("BlockMesh") then
+            obj.TextureId = ""
+        elseif obj:IsA("Decal") or obj:IsA("Texture") then
+            obj.Texture = ""
+            obj.Transparency = 1
+        elseif obj:IsA("ImageLabel") or obj:IsA("ImageButton") then
+            obj.Image = ""
+        elseif obj:IsA("Accessory") or obj:IsA("Hat") then
+            local handle = obj:FindFirstChild("Handle")
+            if handle then
+                handle.Transparency = 1
+                handle.CanCollide = false
             end
-        end)
+        elseif obj:IsA("BasePart") then
+            obj.Material = Enum.Material.SmoothPlastic
+            obj.TopSurface = Enum.SurfaceType.Smooth
+            obj.BottomSurface = Enum.SurfaceType.Smooth
+            obj.CastShadow = false
+            obj.Reflectance = 0
+        end
+    end)
+end
+
+local function batchOptimize()
+    local processed = 0
+    local maxPerBatch = 100
+    for _, obj in pairs(Workspace:GetDescendants()) do
+        if processed >= maxPerBatch then
+            task.wait()
+            processed = 0
+        end
+        optimizeObject(obj)
+        processed = processed + 1
     end
 end
 
+pcall(batchOptimize)
+
+task.delay(15, function()
+    pcall(batchOptimize)
+end)
+
 pcall(function()
-    local t = Workspace:FindFirstChild("Terrain")
-    if t then
-        pcall(function() t.WaterWaveSize = 0 end)
-        pcall(function() t.WaterWaveSpeed = 0 end)
-        pcall(function() t.WaterReflectance = 0 end)
-        pcall(function() t.WaterTransparency = 1 end)
+    local terrain = Workspace:FindFirstChild("Terrain")
+    if terrain then
+        terrain.WaterWaveSize = 0
+        terrain.WaterWaveSpeed = 0
+        terrain.WaterReflectance = 0
+        terrain.WaterTransparency = 1
+        terrain.Decoration = false
+        if sethiddenproperty then
+            pcall(function()
+                sethiddenproperty(terrain, "MaxExtents", Vector3.new(512, 512, 512))
+            end)
+        end
     end
+end)
+
+pcall(function()
+    if not player then return end
+    local playerGui = player:FindFirstChild("PlayerGui")
+    if playerGui then
+        for _, gui in pairs(playerGui:GetDescendants()) do
+            optimizeObject(gui)
+        end
+        playerGui.DescendantAdded:Connect(optimizeObject)
+    end
+    if player.Character then
+        for _, part in pairs(player.Character:GetDescendants()) do
+            optimizeObject(part)
+        end
+    end
+    player.CharacterAdded:Connect(function(char)
+        task.wait(1)
+        for _, part in pairs(char:GetDescendants()) do
+            optimizeObject(part)
+        end
+    end)
+end)
+
+local counter = 0
+local connection
+pcall(function()
+    connection = Workspace.DescendantAdded:Connect(function(obj)
+        optimizeObject(obj)
+        counter += 1
+        if counter >= 100 then
+            counter = 0
+            collectgarbage("collect")
+        end
+    end)
+end)
+
+game:BindToClose(function()
+    if connection then
+        connection:Disconnect()
+    end
+    pcall(function() collectgarbage("collect") end)
 end)
