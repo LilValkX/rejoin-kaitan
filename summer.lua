@@ -1,18 +1,3 @@
--- รอเกมและ PlayerGui
-repeat task.wait() until game:IsLoaded() and Players.LocalPlayer and Players.LocalPlayer:FindFirstChild("PlayerGui")
-local player = Players.LocalPlayer
-
--- โหลดสคริปต์เสริม
-local function safeLoad(url)
-    local success, err = pcall(function()
-        loadstring(game:HttpGet(url))()
-    end)
-    if not success then warn("โหลดสคริปต์ไม่สำเร็จ: "..tostring(err)) end
-end
-
-safeLoad("https://raw.githubusercontent.com/LilValkX/teafram/main/auto-all-settings.lua")
-safeLoad("https://raw.githubusercontent.com/LilValkX/teafram/main/autoskipwave.lua")
-
 -- 📦 ดึง Service สำคัญจากเกม
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
