@@ -1,6 +1,3 @@
--- 🧭 ตั้งค่า FPS Limit เพื่อประหยัดทรัพยากร
-setfpscap(7)
-
 -- 📦 ดึง Service สำคัญจากเกม
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -204,7 +201,6 @@ function GameLogic.disconnectHeartbeat()
     if heartbeatConnection then
         heartbeatConnection:Disconnect()
         heartbeatConnection = nil
-        print("🧹 ตัดการเชื่อมต่อ Heartbeat เก่าแล้ว")
     end
 end
 
@@ -280,8 +276,6 @@ function runGameplayScript()
             GameLogic.upgradeAllUnits()
         end
     end)
-    
-    print("✅ สร้าง Heartbeat Connection ใหม่แล้ว")
 end
 
 -- =====================================================
