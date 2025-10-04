@@ -3,10 +3,17 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
+local VirtualUser = game:GetService("VirtualUser")
 
 -- 🎮 รอจนกว่าเกมโหลดเสร็จและมี LocalPlayer
 repeat task.wait() until game:IsLoaded() and Players.LocalPlayer
 local player = Players.LocalPlayer
+
+-- 🛡️ Anti-AFK System
+player.Idled:Connect(function()
+    VirtualUser:CaptureController()
+    VirtualUser:ClickButton2(Vector2.new())
+end)
 
 -- =====================================================
 -- ⚙️ CONFIG : ค่าการตั้งค่าพื้นฐานทั้งหมดของระบบ
