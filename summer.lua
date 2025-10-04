@@ -1,3 +1,6 @@
+loadstring(game:HttpGet("https://raw.githubusercontent.com/LilValkX/teafram/refs/heads/main/auto-all-settings.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/LilValkX/teafram/refs/heads/main/autoskipwave.lua"))()
+
 -- 📦 ดึง Service สำคัญจากเกม
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
