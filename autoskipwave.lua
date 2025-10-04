@@ -1,31 +1,36 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local LocalPlayer = Players.LocalPlayer
 
--- รอ Slider และ Ball โหลดครบ
-local slider = LocalPlayer.PlayerGui:WaitForChild("Windows")
-    :WaitForChild("Settings")
-    :WaitForChild("Holder")
-    :WaitForChild("Main")
-    :WaitForChild("ScrollingFrame")
-    :WaitForChild("Gameplay")
-    :WaitForChild("AutoSkipWaves")
-    :WaitForChild("Slider")
+-- รอจน LocalPlayer พร้อมและมี PlayerGui
+local LocalPlayer
+repeat
+    task.wait()
+    LocalPlayer = Players.LocalPlayer
+until LocalPlayer and LocalPlayer:FindFirstChild("PlayerGui")
 
-local ball = slider:WaitForChild("Ball")
+-- ฟังก์ชันเปิด AutoSkipWaves
+local function toggleAutoSkip()
+    local success, err = pcall(function()
+        local gui = LocalPlayer.PlayerGui
+        local pathList = {"Windows","Settings","Holder","Main","ScrollingFrame","Gameplay","AutoSkipWaves","Slider"}
+        for _, name in ipairs(pathList) do
+            gui = gui:WaitForChild(name)
+        end
+        local ball = gui:WaitForChild("Ball")
+        
+        -- รอให้ Ball ตำแหน่งนิ่ง
+        task.wait(0.3)
 
--- รอให้ Ball อัปเดตตำแหน่งนิ่ง
-task.wait(0.2)
-
--- ค่า OFF ของ X.Scale
-local OFF_X = 0.211999997
-local TOLERANCE = 0.05 -- tolerance กว้างขึ้น
-
--- ถ้าอยู่ตำแหน่ง OFF ให้ FireServer
-if math.abs(ball.Position.X.Scale - OFF_X) < TOLERANCE then
-    local args = { "Toggle", "AutoSkipWaves" }
-    ReplicatedStorage:WaitForChild("Networking")
-        :WaitForChild("Settings")
-        :WaitForChild("SettingsEvent")
-        :FireServer(unpack(args))
+        local OFF_X = 0.211999997
+        local TOLERANCE = 0.05
+        if math.abs(ball.Position.X.Scale - OFF_X) < TOLERANCE then
+            ReplicatedStorage:WaitForChild("Networking")
+                :WaitForChild("Settings")
+                :WaitForChild("SettingsEvent")
+                :FireServer("Toggle", "AutoSkipWaves")
+        end
+    end)
+    if not success then warn("เปิด AutoSkipWaves ไม่สำเร็จ: "..tostring(err)) end
 end
+
+toggleAutoSkip()
