@@ -1,5 +1,13 @@
-loadstring(game:HttpGet("https://raw.githubusercontent.com/LilValkX/teafram/refs/heads/main/auto-all-settings.lua"))()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/LilValkX/teafram/refs/heads/main/autoskipwave.lua"))()
+-- โหลดสคริปต์เสริม
+local function safeLoad(url)
+    local success, err = pcall(function()
+        loadstring(game:HttpGet(url))()
+    end)
+    if not success then warn("โหลดสคริปต์ไม่สำเร็จ: "..tostring(err)) end
+end
+
+safeLoad("https://raw.githubusercontent.com/LilValkX/teafram/main/auto-all-settings.lua")
+safeLoad("https://raw.githubusercontent.com/LilValkX/teafram/main/autoskipwave.lua")
 
 -- 📦 ดึง Service สำคัญจากเกม
 local RunService = game:GetService("RunService")
