@@ -1,6 +1,10 @@
+-- 🔹 รอเกมและ PlayerGui พร้อม
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
+
+-- รอจน PlayerGui พร้อม
+repeat task.wait() until LocalPlayer and LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild("Windows")
 
 -- 🔹 ค่า OFF ของ X.Scale
 local OFF_X = 0.211999997
@@ -20,10 +24,15 @@ local function toggleIfOff(pathList, name, tolerance, retry, waitTime)
         local currentX = ball.Position.X.Scale
         if math.abs(currentX - OFF_X) < tolerance then
             local args = { "Toggle", name }
-            ReplicatedStorage:WaitForChild("Networking")
-                :WaitForChild("Settings")
-                :WaitForChild("SettingsEvent")
-                :FireServer(unpack(args))
+            local success, err = pcall(function()
+                ReplicatedStorage:WaitForChild("Networking")
+                    :WaitForChild("Settings")
+                    :WaitForChild("SettingsEvent")
+                    :FireServer(unpack(args))
+            end)
+            if not success then
+                warn("เปิด setting "..name.." ไม่สำเร็จ: "..tostring(err))
+            end
         else
             break
         end
