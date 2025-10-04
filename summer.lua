@@ -205,6 +205,109 @@ function GameLogic.disconnectHeartbeat()
 end
 
 -- =====================================================
+-- 🛠️ AUTO SETTINGS : ฟังก์ชันตั้งค่าอัตโนมัติ
+-- =====================================================
+local AutoSettings = {}
+
+-- เปิด AutoSkipWaves อัตโนมัติ
+function AutoSettings.enableAutoSkipWaves()
+    task.spawn(function()
+        local success, err = pcall(function()
+            -- รอจน PlayerGui พร้อม
+            repeat task.wait() until player:FindFirstChild("PlayerGui")
+            
+            local gui = player.PlayerGui
+            local pathList = {"Windows","Settings","Holder","Main","ScrollingFrame","Gameplay","AutoSkipWaves","Slider"}
+            for _, name in ipairs(pathList) do
+                gui = gui:WaitForChild(name, 10)
+                if not gui then return end
+            end
+            local ball = gui:WaitForChild("Ball", 5)
+            if not ball then return end
+            
+            -- รอให้ Ball ตำแหน่งนิ่ง
+            task.wait(0.3)
+
+            local OFF_X = 0.211999997
+            local TOLERANCE = 0.05
+            if math.abs(ball.Position.X.Scale - OFF_X) < TOLERANCE then
+                ReplicatedStorage:WaitForChild("Networking")
+                    :WaitForChild("Settings")
+                    :WaitForChild("SettingsEvent")
+                    :FireServer("Toggle", "AutoSkipWaves")
+                print("✅ เปิด AutoSkipWaves สำเร็จ")
+            end
+        end)
+        if not success then 
+            warn("⚠️ เปิด AutoSkipWaves ไม่สำเร็จ: "..tostring(err)) 
+        end
+    end)
+end
+
+-- ฟังก์ชันเปิด toggle ถ้า OFF
+local function toggleIfOff(pathList, name, tolerance)
+    local success = pcall(function()
+        local gui = player.PlayerGui
+        for _, child in ipairs(pathList) do
+            gui = gui:WaitForChild(child, 5)
+            if not gui then return end
+        end
+        
+        tolerance = tolerance or 0.01
+        local OFF_X = 0.211999997
+        local currentX = gui.Position.X.Scale
+        
+        if math.abs(currentX - OFF_X) < tolerance then
+            ReplicatedStorage:WaitForChild("Networking")
+                :WaitForChild("Settings")
+                :WaitForChild("SettingsEvent")
+                :FireServer("Toggle", name)
+            print("✅ เปิด "..name.." สำเร็จ")
+        end
+    end)
+    
+    if not success then
+        warn("⚠️ เปิด setting "..name.." ไม่สำเร็จ")
+    end
+end
+
+-- เปิดการตั้งค่าทั้งหมด
+function AutoSettings.enableAllSettings()
+    task.spawn(function()
+        -- รอจน PlayerGui และ Windows พร้อม
+        repeat task.wait() until player:FindFirstChild("PlayerGui") 
+            and player.PlayerGui:FindFirstChild("Windows")
+        
+        task.wait(1) -- รอให้ UI โหลดเสร็จ
+        
+        -- รายการ settings ทั้งหมด
+        local settingsList = {
+            -- Units
+            {name="HideOthersUnits", path={"Windows","Settings","Holder","Main","ScrollingFrame","Units","HideOthersUnits","Slider","Ball"}},
+            {name="DisableVisualEffects", path={"Windows","Settings","Holder","Main","ScrollingFrame","Units","DisableVisualEffects","Slider","Ball"}},
+            {name="DisableStatMultiplierPopups", path={"Windows","Settings","Holder","Main","ScrollingFrame","Units","DisableStatMultiplierPopups","Slider","Ball"}},
+            {name="DisableDamageIndicators", path={"Windows","Settings","Holder","Main","ScrollingFrame","Units","DisableDamageIndicators","Slider","Ball"}},
+            -- Enemies
+            {name="DisableEnemyTags", path={"Windows","Settings","Holder","Main","ScrollingFrame","Enemies","DisableEnemyTags","Slider","Ball"}},
+            {name="SimplifiedEnemyGui", path={"Windows","Settings","Holder","Main","ScrollingFrame","Enemies","SimplifiedEnemyGui","Slider","Ball"}},
+            -- Graphics
+            {name="DisableCameraShake", path={"Windows","Settings","Holder","Main","ScrollingFrame","Graphics","DisableCameraShake","Slider","Ball"}},
+            {name="DisableDepthOfField", path={"Windows","Settings","Holder","Main","ScrollingFrame","Graphics","DisableDepthOfField","Slider","Ball"}},
+            {name="LowDetailMode", path={"Windows","Settings","Holder","Main","ScrollingFrame","Graphics","LowDetailMode","Slider","Ball"}},
+            {name="DisableViewCutscenes", path={"Windows","Settings","Holder","Main","ScrollingFrame","Graphics","DisableViewCutscenes","Slider","Ball"}}
+        }
+        
+        -- ตรวจและเปิดทุก setting
+        for _, setting in ipairs(settingsList) do
+            toggleIfOff(setting.path, setting.name, setting.tolerance)
+            task.wait(0.1) -- หน่วงเวลาเล็กน้อยระหว่างการตั้งค่า
+        end
+        
+        print("✅ ตั้งค่าทั้งหมดเสร็จสิ้น")
+    end)
+end
+
+-- =====================================================
 -- 🗺️ MAP LOGIC : สคริปต์แยกระหว่าง Lobby / Gameplay
 -- =====================================================
 -- 🏠 โหมด Lobby : กดเริ่ม Summer Event
@@ -232,6 +335,10 @@ end
 function runGameplayScript()
     -- 🧹 ลบ Connection เก่าก่อนสร้างใหม่ (สำคัญมาก!)
     GameLogic.disconnectHeartbeat()
+    
+    -- 🛠️ เปิดระบบ Auto Settings (ทำงานแบบ async)
+    AutoSettings.enableAutoSkipWaves()
+    AutoSettings.enableAllSettings()
     
     GameLogic.waitForSkipWave()
 
