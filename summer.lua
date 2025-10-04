@@ -37,6 +37,7 @@ local CONFIG = {
 
     CARD_WAVES = {3, 6, 9},          -- Wave ที่จะเลือกการ์ด
     FINAL_WAVE = 10,                 -- Wave สุดท้าย
+    REWARD_PER_RUN = 1500,           -- รางวัลต่อรอบ (IcedTea)
 
     SKIP_WAVE_TIMEOUT = 30,          -- เวลารอ Skip Wave
     WAITFORCHILD_TIMEOUT = 10        -- เวลารอ UI/Instance
@@ -52,7 +53,8 @@ local GameState = {
     lastHeartbeatCheck = 0,          -- เวลาเช็กสถานะล่าสุด
     processedWaves = {},             -- Wave ที่เคยทำไปแล้ว
     currentWave = 0,                 -- Wave ปัจจุบัน
-    currentAction = "Idle"           -- การกระทำปัจจุบัน
+    currentAction = "Idle",          -- การกระทำปัจจุบัน
+    completedRuns = 0                -- จำนวนรอบที่จบ Wave 10 แล้ว
 }
 
 -- 🔌 เก็บ Connection เพื่อให้สามารถ Disconnect ได้
@@ -61,7 +63,8 @@ local heartbeatConnection = nil
 -- 📊 เก็บ GUI Labels เพื่อใช้อัปเดตสถานะ
 local GUILabels = {
     wave = nil,
-    doing = nil
+    doing = nil,
+    reward = nil
 }
 
 -- =====================================================
@@ -159,6 +162,22 @@ function GUI.create()
     doingLabel.Parent = backgroundFrame
     GUILabels.doing = doingLabel
 
+    -- Reward text
+    local rewardLabel = Instance.new("TextLabel")
+    rewardLabel.Name = "Reward"
+    rewardLabel.Size = UDim2.new(1, 0, 0, 45)
+    rewardLabel.Position = UDim2.new(0, 0, 0, 270)
+    rewardLabel.BackgroundTransparency = 1
+    rewardLabel.Text = "Reward All Now: 0 IcedTea"
+    rewardLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+    rewardLabel.TextSize = 34
+    rewardLabel.Font = Enum.Font.GothamBold
+    rewardLabel.TextXAlignment = Enum.TextXAlignment.Center
+    rewardLabel.TextStrokeTransparency = 0.7
+    rewardLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    rewardLabel.Parent = backgroundFrame
+    GUILabels.reward = rewardLabel
+
     -- Typing animation function
     local function animateTyping()
         local prefix = "Status: "
@@ -241,6 +260,7 @@ function GUI.create()
             statusLabel.Visible = false
             waveLabel.Visible = false
             doingLabel.Visible = false
+            rewardLabel.Visible = false
             fpsLabel.Visible = false
             
             -- Move to top-right and scale down
@@ -261,6 +281,7 @@ function GUI.create()
             statusLabel.Visible = true
             waveLabel.Visible = true
             doingLabel.Visible = true
+            rewardLabel.Visible = true
             fpsLabel.Visible = true
             
             -- Return to center
@@ -302,6 +323,16 @@ end
 function GUI.updateWave(wave)
     if GUILabels.wave then
         GUILabels.wave.Text = "Wave: " .. tostring(wave)
+    end
+end
+
+-- อัปเดต Reward
+function GUI.updateReward()
+    if GUILabels.reward then
+        local totalReward = GameState.completedRuns * CONFIG.REWARD_PER_RUN
+        -- ใส่ comma สำหรับตัวเลขใหญ่
+        local formattedReward = tostring(totalReward):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
+        GUILabels.reward.Text = "Reward All Now: " .. formattedReward .. " IcedTea"
     end
 end
 
@@ -456,6 +487,11 @@ function GameLogic.handleWave(wave)
     -- เมื่อถึง Wave สุดท้าย → โหวต Restart และเริ่มใหม่
     if wave == CONFIG.FINAL_WAVE then
         GameState.processedWaves[wave] = true
+        
+        -- เพิ่มจำนวนรอบที่จบและอัปเดต Reward
+        GameState.completedRuns = GameState.completedRuns + 1
+        GUI.updateReward()
+        
         GUI.updateStatus("Voting restart...")
         Network.voteRestart()
         task.wait(CONFIG.VOTE_WAIT)
@@ -536,6 +572,7 @@ function runGameplayScript()
     -- 🖥️ สร้าง GUI เมื่อเข้า Map 2
     GUI.create()
     GUI.updateStatus("Initializing...")
+    GUI.updateReward()  -- อัปเดต Reward ครั้งแรก
     
     -- 🛠️ เปิดระบบ Auto Settings (ทำงานแบบ async)
     AutoSettings.enableAutoSkipWaves()
