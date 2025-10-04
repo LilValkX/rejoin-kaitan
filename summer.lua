@@ -1,3 +1,7 @@
+-- รอเกมและ PlayerGui
+repeat task.wait() until game:IsLoaded() and Players.LocalPlayer and Players.LocalPlayer:FindFirstChild("PlayerGui")
+local player = Players.LocalPlayer
+
 -- โหลดสคริปต์เสริม
 local function safeLoad(url)
     local success, err = pcall(function()
