@@ -48,6 +48,9 @@ local GameState = {
     currentWave = 0                  -- Wave ปัจจุบัน
 }
 
+-- 🔌 เก็บ Connection เพื่อให้สามารถ Disconnect ได้
+local heartbeatConnection = nil
+
 -- =====================================================
 -- 🔧 UTILS : ฟังก์ชันช่วยเหลือทั่วไป
 -- =====================================================
@@ -192,7 +195,16 @@ function GameLogic.handleWave(wave)
         task.wait(CONFIG.VOTE_WAIT)
         GameLogic.resetGameState()
         task.wait(2)
-        runGameplayScript()
+        runGameplayScript()  -- เริ่มใหม่ (จะ Disconnect เก่าก่อนอัตโนมัติ)
+    end
+end
+
+-- 🧹 ตัดการเชื่อมต่อ Heartbeat เก่า (ถ้ามี)
+function GameLogic.disconnectHeartbeat()
+    if heartbeatConnection then
+        heartbeatConnection:Disconnect()
+        heartbeatConnection = nil
+        print("🧹 ตัดการเชื่อมต่อ Heartbeat เก่าแล้ว")
     end
 end
 
@@ -222,6 +234,9 @@ end
 
 -- ⚔️ โหมด Gameplay : จัดการระบบวาง / อัปเกรด / เช็ก Wave
 function runGameplayScript()
+    -- 🧹 ลบ Connection เก่าก่อนสร้างใหม่ (สำคัญมาก!)
+    GameLogic.disconnectHeartbeat()
+    
     GameLogic.waitForSkipWave()
 
     local playerGui = player:WaitForChild("PlayerGui", CONFIG.WAITFORCHILD_TIMEOUT)
@@ -232,7 +247,7 @@ function runGameplayScript()
     local wavesAmountLabel = Utils.safeWaitForChild(mapFrame, "WavesAmount")
 
     -- 🩺 Loop เช็กสถานะทุก HEARTBEAT_INTERVAL
-    RunService.Heartbeat:Connect(function()
+    heartbeatConnection = RunService.Heartbeat:Connect(function()
         local now = tick()
         if now - GameState.lastHeartbeatCheck < CONFIG.HEARTBEAT_INTERVAL then return end
         GameState.lastHeartbeatCheck = now
@@ -265,6 +280,8 @@ function runGameplayScript()
             GameLogic.upgradeAllUnits()
         end
     end)
+    
+    print("✅ สร้าง Heartbeat Connection ใหม่แล้ว")
 end
 
 -- =====================================================
