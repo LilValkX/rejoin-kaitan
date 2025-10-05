@@ -6,6 +6,7 @@ local Workspace = game:GetService("Workspace")
 local VirtualUser = game:GetService("VirtualUser")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
 
 -- 🎮 รอจนกว่าเกมโหลดเสร็จและมี LocalPlayer
 repeat task.wait() until game:IsLoaded() and Players.LocalPlayer
@@ -40,7 +41,10 @@ local CONFIG = {
     REWARD_PER_RUN = 1500,           -- รางวัลต่อรอบ (IcedTea)
 
     SKIP_WAVE_TIMEOUT = 30,          -- เวลารอ Skip Wave
-    WAITFORCHILD_TIMEOUT = 10        -- เวลารอ UI/Instance
+    WAITFORCHILD_TIMEOUT = 10,       -- เวลารอ UI/Instance
+    
+    DATA_FOLDER = "FarmingData",     -- ชื่อโฟลเดอร์เก็บข้อมูล
+    DATA_FILE = "data.json"          -- ชื่อไฟล์ JSON
 }
 
 -- =====================================================
@@ -54,7 +58,8 @@ local GameState = {
     processedWaves = {},             -- Wave ที่เคยทำไปแล้ว
     currentWave = 0,                 -- Wave ปัจจุบัน
     currentAction = "Idle",          -- การกระทำปัจจุบัน
-    completedRuns = 0                -- จำนวนรอบที่จบ Wave 10 แล้ว
+    completedRuns = 0,               -- จำนวนรอบที่จบ Wave 10 แล้ว
+    startIcedTea = 0                 -- จำนวน IcedTea เริ่มต้น
 }
 
 -- 🔌 เก็บ Connection เพื่อให้สามารถ Disconnect ได้
@@ -66,6 +71,93 @@ local GUILabels = {
     doing = nil,
     reward = nil
 }
+
+-- =====================================================
+-- 💾 DATA MANAGER : จัดการข้อมูล JSON
+-- =====================================================
+local DataManager = {}
+
+-- สร้างโฟลเดอร์ถ้ายังไม่มี
+function DataManager.init()
+    if not isfolder(CONFIG.DATA_FOLDER) then
+        makefolder(CONFIG.DATA_FOLDER)
+        print("✅ สร้างโฟลเดอร์ " .. CONFIG.DATA_FOLDER)
+    end
+end
+
+-- อ่านข้อมูลจาก JSON
+function DataManager.loadData()
+    local filePath = CONFIG.DATA_FOLDER .. "/" .. CONFIG.DATA_FILE
+    if isfile(filePath) then
+        local success, data = pcall(function()
+            local content = readfile(filePath)
+            return HttpService:JSONDecode(content)
+        end)
+        if success then
+            print("✅ โหลดข้อมูลสำเร็จ")
+            return data
+        else
+            warn("⚠️ ไม่สามารถอ่านไฟล์ JSON ได้")
+        end
+    end
+    return {}
+end
+
+-- บันทึกข้อมูลลง JSON
+function DataManager.saveData(data)
+    local filePath = CONFIG.DATA_FOLDER .. "/" .. CONFIG.DATA_FILE
+    local success = pcall(function()
+        local jsonString = HttpService:JSONEncode(data)
+        writefile(filePath, jsonString)
+    end)
+    if success then
+        print("✅ บันทึกข้อมูลสำเร็จ")
+    else
+        warn("⚠️ ไม่สามารถบันทึกข้อมูลได้")
+    end
+end
+
+-- ดึงข้อมูลผู้เล่นปัจจุบัน
+function DataManager.getPlayerData()
+    local allData = DataManager.loadData()
+    return allData[player.Name] or {
+        startIcedTea = 0,
+        completedRuns = 0,
+        lastUpdate = os.date("%Y-%m-%d %H:%M:%S")
+    }
+end
+
+-- อัปเดตข้อมูลผู้เล่นปัจจุบัน
+function DataManager.updatePlayerData(completedRuns)
+    local allData = DataManager.loadData()
+    allData[player.Name] = {
+        startIcedTea = GameState.startIcedTea,
+        completedRuns = completedRuns,
+        lastUpdate = os.date("%Y-%m-%d %H:%M:%S")
+    }
+    DataManager.saveData(allData)
+end
+
+-- ดึงจำนวน IcedTea จากเกม
+function DataManager.getIcedTeaFromGame()
+    local success, amount = pcall(function()
+        local playerGui = player:WaitForChild("PlayerGui", 10)
+        local hud = playerGui:WaitForChild("HUD", 10)
+        local main = hud:WaitForChild("Main", 10)
+        local currencies = main:WaitForChild("Currencies", 10)
+        local icedTeaLabel = currencies:GetChildren()[7].Amount
+        local text = icedTeaLabel.Text
+        -- ลบ comma และแปลงเป็นตัวเลข
+        local number = tonumber(text:gsub(",", ""))
+        return number or 0
+    end)
+    if success then
+        return amount
+    else
+        warn("⚠️ ไม่สามารถดึงข้อมูล IcedTea จากเกมได้")
+        return 0
+    end
+end
 
 -- =====================================================
 -- 🖥️ GUI SYSTEM : สร้าง Farming Status GUI
@@ -162,13 +254,13 @@ function GUI.create()
     doingLabel.Parent = backgroundFrame
     GUILabels.doing = doingLabel
 
-    -- Reward text
+    -- IcedTea Now text
     local rewardLabel = Instance.new("TextLabel")
     rewardLabel.Name = "Reward"
     rewardLabel.Size = UDim2.new(1, 0, 0, 45)
     rewardLabel.Position = UDim2.new(0, 0, 0, 270)
     rewardLabel.BackgroundTransparency = 1
-    rewardLabel.Text = "Reward All Now: 0 IcedTea"
+    rewardLabel.Text = "IcedTea Now: 0"
     rewardLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
     rewardLabel.TextSize = 34
     rewardLabel.Font = Enum.Font.GothamBold
@@ -326,13 +418,13 @@ function GUI.updateWave(wave)
     end
 end
 
--- อัปเดต Reward
+-- อัปเดต IcedTea Now
 function GUI.updateReward()
     if GUILabels.reward then
-        local totalReward = GameState.completedRuns * CONFIG.REWARD_PER_RUN
+        local totalReward = GameState.startIcedTea + (GameState.completedRuns * CONFIG.REWARD_PER_RUN)
         -- ใส่ comma สำหรับตัวเลขใหญ่
         local formattedReward = tostring(totalReward):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
-        GUILabels.reward.Text = "Reward All Now: " .. formattedReward .. " IcedTea"
+        GUILabels.reward.Text = "IcedTea Now: " .. formattedReward
     end
 end
 
@@ -488,8 +580,9 @@ function GameLogic.handleWave(wave)
     if wave == CONFIG.FINAL_WAVE then
         GameState.processedWaves[wave] = true
         
-        -- เพิ่มจำนวนรอบที่จบและอัปเดต Reward
+        -- เพิ่มจำนวนรอบที่จบและบันทึกข้อมูล
         GameState.completedRuns = GameState.completedRuns + 1
+        DataManager.updatePlayerData(GameState.completedRuns)
         GUI.updateReward()
         
         GUI.updateStatus("Voting restart...")
@@ -543,9 +636,35 @@ end
 -- =====================================================
 -- 🗺️ MAP LOGIC : สคริปต์แยกระหว่าง Lobby / Gameplay
 -- =====================================================
--- 🏠 โหมด Lobby : กดเริ่ม Summer Event
+-- 🏠 โหมด Lobby : ดึงข้อมูล IcedTea และบันทึก
 function runLobbyScript()
-    task.wait(7)
+    print("📍 อยู่ใน Map 1 (Lobby)")
+    
+    -- เริ่มต้นระบบไฟล์
+    DataManager.init()
+    
+    -- รอให้ UI โหลดเสร็จ
+    task.wait(5)
+    
+    -- ดึงข้อมูล IcedTea จากเกม
+    local currentIcedTea = DataManager.getIcedTeaFromGame()
+    print("💰 IcedTea ปัจจุบัน: " .. tostring(currentIcedTea))
+    
+    -- โหลดข้อมูลเก่า (ถ้ามี)
+    local playerData = DataManager.getPlayerData()
+    
+    -- ถ้ายังไม่เคยมีข้อมูล ให้บันทึกค่าเริ่มต้น
+    if playerData.startIcedTea == 0 then
+        playerData.startIcedTea = currentIcedTea
+        playerData.completedRuns = 0
+        local allData = DataManager.loadData()
+        allData[player.Name] = playerData
+        DataManager.saveData(allData)
+        print("✅ บันทึกข้อมูลเริ่มต้นสำเร็จ")
+    end
+    
+    -- กดเริ่มเกม
+    task.wait(2)
     local networking = ReplicatedStorage:WaitForChild("Networking", 5)
     if not networking then return end
 
@@ -566,13 +685,25 @@ end
 
 -- ⚔️ โหมด Gameplay : จัดการระบบวาง / อัปเกรด / เช็ก Wave
 function runGameplayScript()
+    print("📍 อยู่ใน Map 2 (Gameplay)")
+    
     -- 🧹 ลบ Connection เก่าก่อนสร้างใหม่ (สำคัญมาก!)
     GameLogic.disconnectHeartbeat()
+    
+    -- เริ่มต้นระบบไฟล์
+    DataManager.init()
+    
+    -- โหลดข้อมูลผู้เล่น
+    local playerData = DataManager.getPlayerData()
+    GameState.startIcedTea = playerData.startIcedTea
+    GameState.completedRuns = playerData.completedRuns
+    
+    print("💾 โหลดข้อมูล - เริ่มต้น: " .. GameState.startIcedTea .. " | รอบที่จบ: " .. GameState.completedRuns)
     
     -- 🖥️ สร้าง GUI เมื่อเข้า Map 2
     GUI.create()
     GUI.updateStatus("Initializing...")
-    GUI.updateReward()  -- อัปเดต Reward ครั้งแรก
+    GUI.updateReward()  -- อัปเดต IcedTea Now ครั้งแรก
     
     -- 🛠️ เปิดระบบ Auto Settings (ทำงานแบบ async)
     AutoSettings.enableAutoSkipWaves()
