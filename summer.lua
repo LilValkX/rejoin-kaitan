@@ -204,80 +204,105 @@ function GUI.create()
     -- Name text
     local nameLabel = Instance.new("TextLabel")
     nameLabel.Name = "NameId"
-    nameLabel.Size = UDim2.new(1, 0, 0, 50)
-    nameLabel.Position = UDim2.new(0, 0, 0, 40)
+    nameLabel.Size = UDim2.new(1, 0, 0.07, 0)
+    nameLabel.Position = UDim2.new(0, 0, 0.05, 0)
     nameLabel.BackgroundTransparency = 1
     nameLabel.Text = player.Name
     nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    nameLabel.TextSize = 38
+    nameLabel.TextScaled = true
     nameLabel.Font = Enum.Font.GothamBold
     nameLabel.TextXAlignment = Enum.TextXAlignment.Center
     nameLabel.TextStrokeTransparency = 0.7
     nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     nameLabel.Parent = backgroundFrame
+    
+    local nameConstraint = Instance.new("UITextSizeConstraint")
+    nameConstraint.MaxTextSize = 38
+    nameConstraint.MinTextSize = 10
+    nameConstraint.Parent = nameLabel
 
     -- Status text with typing animation
     local statusLabel = Instance.new("TextLabel")
     statusLabel.Name = "Status"
-    statusLabel.Size = UDim2.new(1, 0, 0, 50)
-    statusLabel.Position = UDim2.new(0, 0, 0, 100)
+    statusLabel.Size = UDim2.new(1, 0, 0.07, 0)
+    statusLabel.Position = UDim2.new(0, 0, 0.13, 0)
     statusLabel.BackgroundTransparency = 1
     statusLabel.Text = "Status: "
     statusLabel.TextColor3 = Color3.fromRGB(150, 255, 150)
-    statusLabel.TextSize = 38
+    statusLabel.TextScaled = true
     statusLabel.Font = Enum.Font.GothamBold
     statusLabel.TextXAlignment = Enum.TextXAlignment.Center
     statusLabel.TextStrokeTransparency = 0.7
     statusLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     statusLabel.Parent = backgroundFrame
+    
+    local statusConstraint = Instance.new("UITextSizeConstraint")
+    statusConstraint.MaxTextSize = 38
+    statusConstraint.MinTextSize = 10
+    statusConstraint.Parent = statusLabel
 
     -- Wave text
     local waveLabel = Instance.new("TextLabel")
     waveLabel.Name = "Wave"
-    waveLabel.Size = UDim2.new(1, 0, 0, 45)
-    waveLabel.Position = UDim2.new(0, 0, 0, 160)
+    waveLabel.Size = UDim2.new(1, 0, 0.06, 0)
+    waveLabel.Position = UDim2.new(0, 0, 0.21, 0)
     waveLabel.BackgroundTransparency = 1
     waveLabel.Text = "Wave: 0"
     waveLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
-    waveLabel.TextSize = 34
+    waveLabel.TextScaled = true
     waveLabel.Font = Enum.Font.GothamBold
     waveLabel.TextXAlignment = Enum.TextXAlignment.Center
     waveLabel.TextStrokeTransparency = 0.7
     waveLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     waveLabel.Parent = backgroundFrame
     GUILabels.wave = waveLabel
+    
+    local waveConstraint = Instance.new("UITextSizeConstraint")
+    waveConstraint.MaxTextSize = 34
+    waveConstraint.MinTextSize = 10
+    waveConstraint.Parent = waveLabel
 
     -- Doing text
     local doingLabel = Instance.new("TextLabel")
     doingLabel.Name = "Doing"
-    doingLabel.Size = UDim2.new(1, 0, 0, 45)
-    doingLabel.Position = UDim2.new(0, 0, 0, 215)
+    doingLabel.Size = UDim2.new(1, 0, 0.06, 0)
+    doingLabel.Position = UDim2.new(0, 0, 0.28, 0)
     doingLabel.BackgroundTransparency = 1
     doingLabel.Text = "Doing: Idle"
     doingLabel.TextColor3 = Color3.fromRGB(150, 200, 255)
-    doingLabel.TextSize = 34
+    doingLabel.TextScaled = true
     doingLabel.Font = Enum.Font.GothamBold
     doingLabel.TextXAlignment = Enum.TextXAlignment.Center
     doingLabel.TextStrokeTransparency = 0.7
     doingLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     doingLabel.Parent = backgroundFrame
     GUILabels.doing = doingLabel
+    
+    local doingConstraint = Instance.new("UITextSizeConstraint")
+    doingConstraint.MaxTextSize = 34
+    doingConstraint.MinTextSize = 10
+    doingConstraint.Parent = doingLabel
 
     -- IcedTea Now text
     local rewardLabel = Instance.new("TextLabel")
     rewardLabel.Name = "Reward"
-    rewardLabel.Size = UDim2.new(1, 0, 0, 45)
-    rewardLabel.Position = UDim2.new(0, 0, 0, 270)
+    rewardLabel.Size = UDim2.new(1, 0, 0.06, 0)
+    rewardLabel.Position = UDim2.new(0, 0, 0.35, 0)
     rewardLabel.BackgroundTransparency = 1
     rewardLabel.Text = "IcedTea Now: 0"
     rewardLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
-    rewardLabel.TextSize = 34
+    rewardLabel.TextScaled = true
     rewardLabel.Font = Enum.Font.GothamBold
     rewardLabel.TextXAlignment = Enum.TextXAlignment.Center
     rewardLabel.TextStrokeTransparency = 0.7
     rewardLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     rewardLabel.Parent = backgroundFrame
     GUILabels.reward = rewardLabel
+    
+    local rewardConstraint = Instance.new("UITextSizeConstraint")
+    rewardConstraint.MaxTextSize = 34
+    rewardConstraint.MinTextSize = 10
+    rewardConstraint.Parent = rewardLabel
 
     -- Typing animation function
     local function animateTyping()
@@ -306,41 +331,54 @@ function GUI.create()
     -- Center image (logo)
     local centerImage = Instance.new("ImageLabel")
     centerImage.Name = "CenterImage"
-    centerImage.Size = UDim2.new(0, 150, 0, 150)
-    centerImage.Position = UDim2.new(0.5, -75, 0.5, -75)
+    centerImage.Size = UDim2.new(0.15, 0, 0.15, 0)
+    centerImage.Position = UDim2.new(0.425, 0, 0.42, 0)
     centerImage.Image = "rbxassetid://82367645016830"
     centerImage.BackgroundTransparency = 1
     centerImage.ZIndex = 3
     centerImage.Parent = screenGui
+    
+    local imageAspectRatio = Instance.new("UIAspectRatioConstraint")
+    imageAspectRatio.AspectRatio = 1
+    imageAspectRatio.Parent = centerImage
 
     local imageCorner = Instance.new("UICorner")
-    imageCorner.CornerRadius = UDim.new(0, 20)
+    imageCorner.CornerRadius = UDim.new(0.15, 0)
     imageCorner.Parent = centerImage
 
     -- Toggle button
     local toggleButton = Instance.new("ImageButton")
     toggleButton.Name = "ToggleButton"
-    toggleButton.Size = UDim2.new(0, 150, 0, 150)
-    toggleButton.Position = centerImage.Position
+    toggleButton.Size = UDim2.new(0.15, 0, 0.15, 0)
+    toggleButton.Position = UDim2.new(0.425, 0, 0.42, 0)
     toggleButton.BackgroundTransparency = 1
     toggleButton.Image = ""
     toggleButton.ZIndex = 4
     toggleButton.Parent = screenGui
+    
+    local buttonAspectRatio = Instance.new("UIAspectRatioConstraint")
+    buttonAspectRatio.AspectRatio = 1
+    buttonAspectRatio.Parent = toggleButton
 
     -- FPS Counter
     local fpsLabel = Instance.new("TextLabel")
     fpsLabel.Name = "FPSLabel"
-    fpsLabel.Size = UDim2.new(0, 300, 0, 60)
-    fpsLabel.Position = UDim2.new(0.5, -150, 1, -150)
+    fpsLabel.Size = UDim2.new(0.3, 0, 0.08, 0)
+    fpsLabel.Position = UDim2.new(0.35, 0, 0.88, 0)
     fpsLabel.BackgroundTransparency = 1
     fpsLabel.Text = "FPS: --"
     fpsLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    fpsLabel.TextSize = 48
+    fpsLabel.TextScaled = true
     fpsLabel.Font = Enum.Font.GothamBold
     fpsLabel.TextStrokeTransparency = 0.5
     fpsLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     fpsLabel.ZIndex = 2
     fpsLabel.Parent = backgroundFrame
+    
+    local fpsConstraint = Instance.new("UITextSizeConstraint")
+    fpsConstraint.MaxTextSize = 48
+    fpsConstraint.MinTextSize = 10
+    fpsConstraint.Parent = fpsLabel
 
     -- FPS Counter Loop
     spawn(function()
@@ -364,12 +402,12 @@ function GUI.create()
             fpsLabel.Visible = false
             
             local tween = TweenService:Create(centerImage, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                Position = UDim2.new(1, -85, 0, 100),
-                Size = UDim2.new(0, 75, 0, 75)
+                Position = UDim2.new(0.88, 0, 0.08, 0),
+                Size = UDim2.new(0.08, 0, 0.08, 0)
             })
             local buttonTween = TweenService:Create(toggleButton, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                Position = UDim2.new(1, -85, 0, 100),
-                Size = UDim2.new(0, 75, 0, 75)
+                Position = UDim2.new(0.88, 0, 0.08, 0),
+                Size = UDim2.new(0.08, 0, 0.08, 0)
             })
             tween:Play()
             buttonTween:Play()
@@ -383,12 +421,12 @@ function GUI.create()
             fpsLabel.Visible = true
             
             local tween = TweenService:Create(centerImage, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                Position = UDim2.new(0.5, -75, 0.5, -75),
-                Size = UDim2.new(0, 150, 0, 150)
+                Position = UDim2.new(0.425, 0, 0.42, 0),
+                Size = UDim2.new(0.15, 0, 0.15, 0)
             })
             local buttonTween = TweenService:Create(toggleButton, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                Position = UDim2.new(0.5, -75, 0.5, -75),
-                Size = UDim2.new(0, 150, 0, 150)
+                Position = UDim2.new(0.425, 0, 0.42, 0),
+                Size = UDim2.new(0.15, 0, 0.15, 0)
             })
             tween:Play()
             buttonTween:Play()
