@@ -43,7 +43,7 @@ local CONFIG = {
     SKIP_WAVE_TIMEOUT = 30,          -- เวลารอ Skip Wave
     WAITFORCHILD_TIMEOUT = 10,       -- เวลารอ UI/Instance
     
-    DATA_FOLDER = "Anime-Vanguards-IcedTea",     -- ชื่อโฟลเดอร์เก็บข้อมูล
+    DATA_FOLDER = "FarmingData",     -- ชื่อโฟลเดอร์เก็บข้อมูล
     DATA_FILE = "data.json"          -- ชื่อไฟล์ JSON
 }
 
