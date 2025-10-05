@@ -81,7 +81,6 @@ local DataManager = {}
 function DataManager.init()
     if not isfolder(CONFIG.DATA_FOLDER) then
         makefolder(CONFIG.DATA_FOLDER)
-        print("✅ สร้างโฟลเดอร์ " .. CONFIG.DATA_FOLDER)
     end
 end
 
@@ -94,10 +93,7 @@ function DataManager.loadData()
             return HttpService:JSONDecode(content)
         end)
         if success then
-            print("✅ โหลดข้อมูลสำเร็จ")
             return data
-        else
-            warn("⚠️ ไม่สามารถอ่านไฟล์ JSON ได้")
         end
     end
     return {}
@@ -106,15 +102,10 @@ end
 -- บันทึกข้อมูลลง JSON
 function DataManager.saveData(data)
     local filePath = CONFIG.DATA_FOLDER .. "/" .. CONFIG.DATA_FILE
-    local success = pcall(function()
+    pcall(function()
         local jsonString = HttpService:JSONEncode(data)
         writefile(filePath, jsonString)
     end)
-    if success then
-        print("✅ บันทึกข้อมูลสำเร็จ")
-    else
-        warn("⚠️ ไม่สามารถบันทึกข้อมูลได้")
-    end
 end
 
 -- ดึงข้อมูลผู้เล่นปัจจุบัน
@@ -145,16 +136,34 @@ function DataManager.getIcedTeaFromGame()
         local hud = playerGui:WaitForChild("HUD", 10)
         local main = hud:WaitForChild("Main", 10)
         local currencies = main:WaitForChild("Currencies", 10)
-        local icedTeaLabel = currencies:GetChildren()[7].Amount
-        local text = icedTeaLabel.Text
-        -- ลบ comma และแปลงเป็นตัวเลข
-        local number = tonumber(text:gsub(",", ""))
-        return number or 0
+        
+        -- วนลูปหา CurrencyFrame ที่มี IcedTea
+        for _, child in ipairs(currencies:GetChildren()) do
+            if child:IsA("Frame") and child.Name == "CurrencyFrame" then
+                local amountObj = child:FindFirstChild("Amount")
+                if amountObj then
+                    local icedTea = amountObj:FindFirstChild("IcedTea")
+                    if icedTea then
+                        -- อ่านค่า Text
+                        local amountText = ""
+                        if amountObj:IsA("TextLabel") or amountObj:IsA("TextButton") then
+                            amountText = amountObj.Text
+                        end
+                        
+                        -- ลบ comma และแปลงเป็นตัวเลข
+                        local cleanText = tostring(amountText):gsub(",", "")
+                        local numericValue = tonumber(cleanText) or 0
+                        return numericValue
+                    end
+                end
+            end
+        end
+        return 0
     end)
+    
     if success then
         return amount
     else
-        warn("⚠️ ไม่สามารถดึงข้อมูล IcedTea จากเกมได้")
         return 0
     end
 end
@@ -347,7 +356,6 @@ function GUI.create()
     toggleButton.MouseButton1Click:Connect(function()
         isMinimized = not isMinimized
         if isMinimized then
-            -- Hide all text elements
             nameLabel.Visible = false
             statusLabel.Visible = false
             waveLabel.Visible = false
@@ -355,7 +363,6 @@ function GUI.create()
             rewardLabel.Visible = false
             fpsLabel.Visible = false
             
-            -- Move to top-right and scale down
             local tween = TweenService:Create(centerImage, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
                 Position = UDim2.new(1, -85, 0, 100),
                 Size = UDim2.new(0, 75, 0, 75)
@@ -368,7 +375,6 @@ function GUI.create()
             buttonTween:Play()
             backgroundFrame.BackgroundTransparency = 0.9
         else
-            -- Show all text elements
             nameLabel.Visible = true
             statusLabel.Visible = true
             waveLabel.Visible = true
@@ -376,7 +382,6 @@ function GUI.create()
             rewardLabel.Visible = true
             fpsLabel.Visible = true
             
-            -- Return to center
             local tween = TweenService:Create(centerImage, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
                 Position = UDim2.new(0.5, -75, 0.5, -75),
                 Size = UDim2.new(0, 150, 0, 150)
@@ -399,8 +404,6 @@ function GUI.create()
             screenGui.Enabled = not screenGui.Enabled
         end
     end)
-
-    print("✅ Farming Status GUI Loaded!")
 end
 
 -- อัปเดต GUI สถานะ
@@ -422,7 +425,6 @@ end
 function GUI.updateReward()
     if GUILabels.reward then
         local totalReward = GameState.startIcedTea + (GameState.completedRuns * CONFIG.REWARD_PER_RUN)
-        -- ใส่ comma สำหรับตัวเลขใหญ่
         local formattedReward = tostring(totalReward):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
         GUILabels.reward.Text = "IcedTea Now: " .. formattedReward
     end
@@ -433,21 +435,18 @@ end
 -- =====================================================
 local Utils = {}
 
--- แปลงเวลาในรูปแบบ HH:MM:SS → วินาที
 function Utils.parseTime(timeStr)
     local h, m, s = timeStr:match("(%d+):(%d+):(%d+)")
     if not h or not m or not s then return 0 end
     return (tonumber(h) * 3600) + (tonumber(m) * 60) + tonumber(s)
 end
 
--- ตัด tag HTML ออกจากข้อความ (ใช้กับ Wave Label)
 function Utils.stripHTMLTags(text)
     local waveNum = text:match('<font transparency="0">(%d+)</font>')
     if waveNum then return waveNum end
     return text:gsub("<[^>]*>", "")
 end
 
--- รอให้ Child ปรากฏโดยมี Timeout ปลอดภัย
 function Utils.safeWaitForChild(parent, name, timeout)
     timeout = timeout or CONFIG.WAITFORCHILD_TIMEOUT
     local child = parent:WaitForChild(name, timeout)
@@ -459,7 +458,6 @@ end
 -- =====================================================
 local Network = {}
 
--- ส่งคำสั่งไปยัง Event ตาม path ที่กำหนด
 function Network.fireServer(path, args)
     local success = pcall(function()
         local event = ReplicatedStorage:WaitForChild("Networking", 5)
@@ -471,31 +469,26 @@ function Network.fireServer(path, args)
     return success
 end
 
--- สั่งวางยูนิต
 function Network.spawnUnit(name)
     return Network.fireServer("UnitEvent", {"Render", {name, CONFIG.UNIT_LEVEL, CONFIG.SPAWN_POSITION, 0}})
 end
 
--- สั่งอัปเกรดยูนิต
 function Network.upgradeUnit(unitName)
     return Network.fireServer("UnitEvent", {"Upgrade", unitName})
 end
 
--- เลือกการ์ดเมื่อถึง Wave ที่กำหนด
 function Network.chooseCards()
     ReplicatedStorage:WaitForChild("Networking"):WaitForChild("ModifierEvent"):FireServer("Choose", "Evolution")
     task.wait(0.1)
     ReplicatedStorage:WaitForChild("Networking"):WaitForChild("ModifierEvent"):FireServer("Choose", "Nighttime")
 end
 
--- โหวต Restart เกม
 function Network.voteRestart()
     pcall(function()
         ReplicatedStorage:WaitForChild("Networking"):WaitForChild("MatchRestartSettingEvent"):FireServer("Vote")
     end)
 end
 
--- กด Skip Wave
 function Network.skipWave()
     return Network.fireServer("SkipWaveEvent", {"Skip"})
 end
@@ -505,7 +498,6 @@ end
 -- =====================================================
 local GameLogic = {}
 
--- ✅ รอจนกว่าจะเจอปุ่ม SkipWave แล้วกดข้าม
 function GameLogic.waitForSkipWave()
     GUI.updateStatus("Waiting for skip wave...")
     local playerGui = player:WaitForChild("PlayerGui", CONFIG.WAITFORCHILD_TIMEOUT)
@@ -525,7 +517,6 @@ function GameLogic.waitForSkipWave()
     end
 end
 
--- ⚔️ วางยูนิตทั้งหมดตามรายชื่อใน CONFIG
 function GameLogic.spawnAllUnits()
     GUI.updateStatus("Spawning units...")
     for _, name in ipairs(CONFIG.UNIT_NAMES) do
@@ -536,7 +527,6 @@ function GameLogic.spawnAllUnits()
     GUI.updateStatus("Units spawned")
 end
 
--- 💎 อัปเกรดยูนิตทั้งหมดในแผนที่
 function GameLogic.upgradeAllUnits()
     if tick() - GameState.lastUpgradeTime < CONFIG.UPGRADE_COOLDOWN then return end
     GUI.updateStatus("Upgrading units...")
@@ -552,7 +542,6 @@ function GameLogic.upgradeAllUnits()
     GUI.updateStatus("Idle")
 end
 
--- 🔄 รีเซ็ตสถานะเกมเพื่อเริ่มรอบใหม่
 function GameLogic.resetGameState()
     GameState.hasSpawned = false
     GameState.missedSpawnTime = false
@@ -563,11 +552,9 @@ function GameLogic.resetGameState()
     GUI.updateStatus("Restarting...")
 end
 
--- 🌊 จัดการเหตุการณ์ต่างๆ ในแต่ละ Wave
 function GameLogic.handleWave(wave)
     if GameState.processedWaves[wave] then return end
 
-    -- เลือกการ์ดใน Wave ที่กำหนด
     if table.find(CONFIG.CARD_WAVES, wave) then
         GUI.updateStatus("Choosing cards...")
         Network.chooseCards()
@@ -576,11 +563,9 @@ function GameLogic.handleWave(wave)
         GUI.updateStatus("Idle")
     end
 
-    -- เมื่อถึง Wave สุดท้าย → โหวต Restart และเริ่มใหม่
     if wave == CONFIG.FINAL_WAVE then
         GameState.processedWaves[wave] = true
         
-        -- เพิ่มจำนวนรอบที่จบและบันทึกข้อมูล
         GameState.completedRuns = GameState.completedRuns + 1
         DataManager.updatePlayerData(GameState.completedRuns)
         GUI.updateReward()
@@ -590,11 +575,10 @@ function GameLogic.handleWave(wave)
         task.wait(CONFIG.VOTE_WAIT)
         GameLogic.resetGameState()
         task.wait(2)
-        runGameplayScript()  -- เริ่มใหม่ (จะ Disconnect เก่าก่อนอัตโนมัติ)
+        runGameplayScript()
     end
 end
 
--- 🧹 ตัดการเชื่อมต่อ Heartbeat เก่า (ถ้ามี)
 function GameLogic.disconnectHeartbeat()
     if heartbeatConnection then
         heartbeatConnection:Disconnect()
@@ -607,63 +591,42 @@ end
 -- =====================================================
 local AutoSettings = {}
 
--- โหลดและรัน AutoSkipWaves script
 function AutoSettings.enableAutoSkipWaves()
     task.spawn(function()
-        local success, err = pcall(function()
+        pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/LilValkX/teafram/refs/heads/main/autoskipwave.lua", true))()
-            print("✅ โหลด AutoSkipWaves สำเร็จ")
         end)
-        if not success then 
-            warn("⚠️ โหลด AutoSkipWaves ไม่สำเร็จ: "..tostring(err)) 
-        end
     end)
 end
 
--- โหลดและรัน Auto All Settings script
 function AutoSettings.enableAllSettings()
     task.spawn(function()
-        local success, err = pcall(function()
+        pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/LilValkX/teafram/refs/heads/main/auto-all-settings.lua", true))()
-            print("✅ โหลด Auto All Settings สำเร็จ")
         end)
-        if not success then
-            warn("⚠️ โหลด Auto All Settings ไม่สำเร็จ: "..tostring(err))
-        end
     end)
 end
 
 -- =====================================================
 -- 🗺️ MAP LOGIC : สคริปต์แยกระหว่าง Lobby / Gameplay
 -- =====================================================
--- 🏠 โหมด Lobby : ดึงข้อมูล IcedTea และบันทึก
 function runLobbyScript()
-    print("📍 อยู่ใน Map 1 (Lobby)")
-    
-    -- เริ่มต้นระบบไฟล์
     DataManager.init()
     
-    -- รอให้ UI โหลดเสร็จ
     task.wait(5)
     
-    -- ดึงข้อมูล IcedTea จากเกม
     local currentIcedTea = DataManager.getIcedTeaFromGame()
-    print("💰 IcedTea ปัจจุบัน: " .. tostring(currentIcedTea))
     
-    -- โหลดข้อมูลเก่า (ถ้ามี)
     local playerData = DataManager.getPlayerData()
     
-    -- ถ้ายังไม่เคยมีข้อมูล ให้บันทึกค่าเริ่มต้น
     if playerData.startIcedTea == 0 then
         playerData.startIcedTea = currentIcedTea
         playerData.completedRuns = 0
         local allData = DataManager.loadData()
         allData[player.Name] = playerData
         DataManager.saveData(allData)
-        print("✅ บันทึกข้อมูลเริ่มต้นสำเร็จ")
     end
     
-    -- กดเริ่มเกม
     task.wait(2)
     local networking = ReplicatedStorage:WaitForChild("Networking", 5)
     if not networking then return end
@@ -683,29 +646,19 @@ function runLobbyScript()
     end
 end
 
--- ⚔️ โหมด Gameplay : จัดการระบบวาง / อัปเกรด / เช็ก Wave
 function runGameplayScript()
-    print("📍 อยู่ใน Map 2 (Gameplay)")
-    
-    -- 🧹 ลบ Connection เก่าก่อนสร้างใหม่ (สำคัญมาก!)
     GameLogic.disconnectHeartbeat()
     
-    -- เริ่มต้นระบบไฟล์
     DataManager.init()
     
-    -- โหลดข้อมูลผู้เล่น
     local playerData = DataManager.getPlayerData()
     GameState.startIcedTea = playerData.startIcedTea
     GameState.completedRuns = playerData.completedRuns
     
-    print("💾 โหลดข้อมูล - เริ่มต้น: " .. GameState.startIcedTea .. " | รอบที่จบ: " .. GameState.completedRuns)
-    
-    -- 🖥️ สร้าง GUI เมื่อเข้า Map 2
     GUI.create()
     GUI.updateStatus("Initializing...")
-    GUI.updateReward()  -- อัปเดต IcedTea Now ครั้งแรก
+    GUI.updateReward()
     
-    -- 🛠️ เปิดระบบ Auto Settings (ทำงานแบบ async)
     AutoSettings.enableAutoSkipWaves()
     AutoSettings.enableAllSettings()
     
@@ -720,17 +673,14 @@ function runGameplayScript()
 
     GUI.updateStatus("Waiting for spawn time...")
 
-    -- 🩺 Loop เช็กสถานะทุก HEARTBEAT_INTERVAL
     heartbeatConnection = RunService.Heartbeat:Connect(function()
         local now = tick()
         if now - GameState.lastHeartbeatCheck < CONFIG.HEARTBEAT_INTERVAL then return end
         GameState.lastHeartbeatCheck = now
 
-        -- เวลาในเกม (ใช้จับจังหวะวางยูนิต)
         local timeText = timerLabel.Text
         local seconds = Utils.parseTime(timeText)
 
-        -- วางยูนิตตามเวลาที่กำหนด
         if not GameState.hasSpawned and not GameState.missedSpawnTime then
             if seconds >= CONFIG.SPAWN_TIME and seconds < CONFIG.SPAWN_TIME + 1 then
                 GameLogic.spawnAllUnits()
@@ -740,7 +690,6 @@ function runGameplayScript()
             end
         end
 
-        -- ตรวจ Wave ปัจจุบัน
         local waveText = wavesAmountLabel.Text
         local cleanText = Utils.stripHTMLTags(waveText)
         local currentWave = tonumber(cleanText)
@@ -751,7 +700,6 @@ function runGameplayScript()
             GameLogic.handleWave(currentWave)
         end
 
-        -- อัปเกรดยูนิตระหว่างเล่น
         if GameState.hasSpawned and GameState.currentAction == "Idle" then
             GameLogic.upgradeAllUnits()
         end
